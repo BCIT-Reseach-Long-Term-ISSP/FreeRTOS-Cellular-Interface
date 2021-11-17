@@ -96,7 +96,7 @@ static CellularPktStatus_t _parseSocketOpenNextTok( const char * pToken,
         if( sockStatus != 0 )
         {
             pSocketData->socketState = SOCKETSTATE_DISCONNECTED;
-            CellularLogError( "_parseSocketOpen: Socket open failed, conn %d, status %d", sockIndex, sockStatus );
+            CellularLogError( "_parseSocketOpen: Socket open failed, conn %lu, status %ld", sockIndex, sockStatus );
         }
         else
         {
@@ -120,7 +120,7 @@ static CellularPktStatus_t _parseSocketOpenNextTok( const char * pToken,
         }
         else
         {
-            CellularLogError( "_parseSocketOpen: Socket open callback for conn %d is not set!!", sockIndex );
+            CellularLogError( "_parseSocketOpen: Socket open callback for conn %lu is not set!!", sockIndex );
         }
     }
 

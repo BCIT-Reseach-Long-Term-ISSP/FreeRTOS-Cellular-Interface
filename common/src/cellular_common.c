@@ -640,7 +640,7 @@ CellularError_t _Cellular_RemoveSocketData( CellularContext_t * pContext,
 
     if( socketHandle->socketState == SOCKETSTATE_CONNECTING )
     {
-        CellularLogWarn( "_Cellular_RemoveSocket, socket is connecting state [%d]", socketHandle->socketId );
+        CellularLogWarn( "_Cellular_RemoveSocket, socket is connecting state [%lu]", socketHandle->socketId );
     }
 
     taskENTER_CRITICAL();
@@ -685,7 +685,7 @@ CellularError_t _Cellular_IsValidSocket( const CellularContext_t * pContext,
     {
         if( ( sockIndex >= CELLULAR_NUM_SOCKET_MAX ) || ( pContext->pSocketData[ sockIndex ] == NULL ) )
         {
-            CellularLogError( "_Cellular_IsValidSocket, invalid socket handle %d", sockIndex );
+            CellularLogError( "_Cellular_IsValidSocket, invalid socket handle %lu", sockIndex );
             cellularStatus = CELLULAR_BAD_PARAMETER;
         }
     }
@@ -955,7 +955,7 @@ CellularSocketContext_t * _Cellular_GetSocketData( const CellularContext_t * pCo
     {
         if( ( sockIndex >= CELLULAR_NUM_SOCKET_MAX ) || ( pContext->pSocketData[ sockIndex ] == NULL ) )
         {
-            CellularLogError( "_Cellular_GetSocketData, invalid socket handle %d", sockIndex );
+            CellularLogError( "_Cellular_GetSocketData, invalid socket handle %lu", sockIndex );
         }
         else
         {

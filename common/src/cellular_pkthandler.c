@@ -759,7 +759,7 @@ void _Cellular_AtParseInit( const CellularContext_t * pContext )
 
             if( result >= 0 )
             {
-                CellularLogError( "AtParseFail for %u: %d %s %s", i, result,
+                CellularLogError( "AtParseFail for %lu: %ld %s %s", i, result,
                                   pTokenMap[ i ].pStrValue, pTokenMap[ i + 1U ].pStrValue );
                 finit = false;
             }
