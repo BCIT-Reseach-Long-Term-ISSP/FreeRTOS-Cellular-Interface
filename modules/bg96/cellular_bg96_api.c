@@ -97,10 +97,10 @@
 
 #define INVALID_PDN_INDEX                        ( 0xFFU )
 
-#define DATA_PREFIX_STRING                       "+QIRD:"
-#define DATA_PREFIX_STRING_LENGTH                ( 6U )
+#define DATA_PREFIX_STRING                       "+QSSLRECV:"
+#define DATA_PREFIX_STRING_LENGTH                ( 10U )
 
-#define MAX_QIRD_STRING_PREFIX_STRING            ( 14U )    /* The max data prefix string is "+QIRD: 1460\r\n" */
+#define MAX_QIRD_STRING_PREFIX_STRING            ( 18U )    /* The max data prefix string is "+QIRD: 1460\r\n" */
 
 /*-----------------------------------------------------------*/
 
@@ -1177,7 +1177,6 @@ static CellularError_t buildSocketConnect( CellularSocketHandle_t socketHandle,
                                            char * pCmdBuf )
 {
     CellularError_t cellularStatus = CELLULAR_SUCCESS;
-    char protocol[ 15 ];
 
     if( pCmdBuf == NULL )
     {
@@ -1187,29 +1186,19 @@ static CellularError_t buildSocketConnect( CellularSocketHandle_t socketHandle,
 
     if( cellularStatus == CELLULAR_SUCCESS )
     {
-        if( socketHandle->socketProtocol == CELLULAR_SOCKET_PROTOCOL_TCP )
-        {
-            ( void ) strcpy( protocol, "TCP" );
-        }
-        else
-        {
-            ( void ) strcpy( protocol, "UDP SERVICE" );
-        }
-
         /* Form the AT command. */
 
         /* The return value of snprintf is not used.
          * The max length of the string is fixed and checked offline. */
         /* coverity[misra_c_2012_rule_21_6_violation]. */
         ( void ) snprintf( pCmdBuf, CELLULAR_AT_CMD_MAX_SIZE,
-                           "%s%d,%ld,\"%s\",\"%s\",%d,%d,%d",
-                           "AT+QIOPEN=",
+                           "%s%d,%d,%ld,\"%s\",%d,%d",
+                           "AT+QSSLOPEN=",
                            socketHandle->contextId,
+						   0,
                            socketHandle->socketId,
-                           protocol,
                            socketHandle->remoteSocketAddress.ipAddress.ipAddress,
                            socketHandle->remoteSocketAddress.port,
-                           socketHandle->localPort,
                            socketHandle->dataMode );
     }
 
@@ -1733,7 +1722,7 @@ static CellularPktStatus_t socketRecvDataPrefix( void * pCallbackContext,
 
         if( pDataStart != NULL )
         {
-            tempStrlen = strlen( "+QIRD:" );
+            tempStrlen = strlen( "+QSSLRECV:" );
             atResult = Cellular_ATStrtoi( &pDataStart[ tempStrlen ], 10, &tempValue );
 
             if( ( atResult == CELLULAR_AT_SUCCESS ) && ( tempValue >= 0 ) &&
@@ -2525,7 +2514,7 @@ CellularError_t Cellular_SocketRecv( CellularHandle_t cellularHandle,
     {
         cmdBuf,
         CELLULAR_AT_MULTI_DATA_WO_PREFIX,
-        "+QIRD",
+        "+QSSLRECV",
         _Cellular_RecvFuncData,
         ( void * ) &dataRecv,
         bufferLength,
@@ -2566,7 +2555,7 @@ CellularError_t Cellular_SocketRecv( CellularHandle_t cellularHandle,
          * The max length of the string is fixed and checked offline. */
         /* coverity[misra_c_2012_rule_21_6_violation]. */
         ( void ) snprintf( cmdBuf, CELLULAR_AT_CMD_TYPICAL_MAX_SIZE,
-                           "%s%ld,%ld", "AT+QIRD=", socketHandle->socketId, recvLen );
+                           "%s%ld,%ld", "AT+QSSLRECV=", socketHandle->socketId, recvLen );
         pktStatus = _Cellular_TimeoutAtcmdDataRecvRequestWithCallback( pContext,
                                                                        atReqSocketRecv, recvTimeout, socketRecvDataPrefix, NULL );
 
@@ -2652,7 +2641,7 @@ CellularError_t Cellular_SocketSend( CellularHandle_t cellularHandle,
          * The max length of the string is fixed and checked offline. */
         /* coverity[misra_c_2012_rule_21_6_violation]. */
         ( void ) snprintf( cmdBuf, CELLULAR_AT_CMD_TYPICAL_MAX_SIZE, "%s%ld,%ld",
-                           "AT+QISEND=", socketHandle->socketId, atDataReqSocketSend.dataLen );
+                           "AT+QSSLSEND=", socketHandle->socketId, atDataReqSocketSend.dataLen );
 
         pktStatus = _Cellular_AtcmdDataSend( pContext, atReqSocketSend, atDataReqSocketSend,
                                              socketSendDataPrefix, NULL,
