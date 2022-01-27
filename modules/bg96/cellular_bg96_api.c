@@ -2700,7 +2700,7 @@ CellularError_t Cellular_SocketClose( CellularHandle_t cellularHandle,
             /* The return value of snprintf is not used.
              * The max length of the string is fixed and checked offline. */
             /* coverity[misra_c_2012_rule_21_6_violation]. */
-            ( void ) snprintf( cmdBuf, CELLULAR_AT_CMD_TYPICAL_MAX_SIZE, "%s%ld", "AT+QICLOSE=", socketHandle->socketId );
+            ( void ) snprintf( cmdBuf, CELLULAR_AT_CMD_TYPICAL_MAX_SIZE, "%s%ld", "AT+QSSLCLOSE=", socketHandle->socketId );
             pktStatus = _Cellular_TimeoutAtcmdRequestWithCallback( pContext, atReqSockClose,
                                                                    SOCKET_DISCONNECT_PACKET_REQ_TIMEOUT_MS );
 
