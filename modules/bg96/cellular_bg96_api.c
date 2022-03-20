@@ -1750,7 +1750,7 @@ static CellularPktStatus_t socketRecvDataPrefix( void * pCallbackContext,
             {
                 *pDataLength = 0;
                 pDataStart = NULL;
-                CellularLogError( "Data response received with wrong size" );
+                //CellularLogError( "Data response received with wrong size" );
             }
         }
 
