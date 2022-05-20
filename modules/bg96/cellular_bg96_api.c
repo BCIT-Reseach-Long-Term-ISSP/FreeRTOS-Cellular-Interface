@@ -2773,6 +2773,12 @@ CellularError_t Cellular_SocketConnect( CellularHandle_t cellularHandle,
 
         if( pktStatus != CELLULAR_PKT_STATUS_OK )
         {
+            pktStatus = _Cellular_TimeoutAtcmdRequestWithCallback( pContext, atReqSocketConnect,
+                                                               SOCKET_CONNECT_PACKET_REQ_TIMEOUT_MS );
+        }                                                               
+
+        if( pktStatus != CELLULAR_PKT_STATUS_OK )
+        {
             CellularLogError( "Cellular_SocketConnect: Socket connect failed, cmdBuf:%s, PktRet: %d", cmdBuf, pktStatus );
             cellularStatus = _Cellular_TranslatePktStatus( pktStatus );
         }
