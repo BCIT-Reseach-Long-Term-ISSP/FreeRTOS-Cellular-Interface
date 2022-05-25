@@ -218,7 +218,8 @@ CellularError_t Cellular_ModuleEnableUE( CellularContext_t * pContext )
         if( cellularStatus == CELLULAR_SUCCESS )
         {
             /* Enable RTS/CTS hardware flow control. */
-            atReqGetNoResult.pAtCmd = "AT+IFC=2,2";
+            atReqGetNoResult.pAtCmd = "AT+IFC=0,0";
+            //atReqGetNoResult.pAtCmd = "AT+IFC=2,2";
             cellularStatus = sendAtCommandWithRetryTimeout( pContext, &atReqGetNoResult );
         }
 
@@ -233,47 +234,45 @@ CellularError_t Cellular_ModuleEnableUE( CellularContext_t * pContext )
             cellularStatus = sendAtCommandWithRetryTimeout( pContext, &atReqGetNoResult );
         }
 
-        if( cellularStatus == CELLULAR_SUCCESS )
-        {
-            /* Configure Band configuration to all bands. */
-            atReqGetNoResult.pAtCmd = "AT+QCFG=\"band\",f,400a0e189f,a0e189f";
-            cellularStatus = sendAtCommandWithRetryTimeout( pContext, &atReqGetNoResult );
-        }
+        if( CELLULAR_NEW_SHIELD ) {
 
-        if( cellularStatus == CELLULAR_SUCCESS )
-        {
-            /* Configure RAT(s) to be Searched to Automatic. */
-            atReqGetNoResult.pAtCmd = "AT+QCFG=\"nwscanmode\",0,1";
-            cellularStatus = sendAtCommandWithRetryTimeout( pContext, &atReqGetNoResult );
-        }
-
-        if( cellularStatus == CELLULAR_SUCCESS )
-        {
-            /* Configure Network Category to be Searched under LTE RAT to LTE Cat M1 and Cat NB1. */
-            atReqGetNoResult.pAtCmd = "AT+QCFG=\"iotopmode\",2,1";
-            cellularStatus = sendAtCommandWithRetryTimeout( pContext, &atReqGetNoResult );
-        }
-
-        if( cellularStatus == CELLULAR_SUCCESS )
-        {
-            /* Configure RAT Searching Sequence to default radio access technology. */
-            switch( CELLULAR_CONFIG_DEFAULT_RAT )
-            {
-            case CELLULAR_RAT_CATM1:
-                atReqGetNoResult.pAtCmd = "AT+QCFG=\"nwscanseq\",02,1";
-                break;
-            case CELLULAR_RAT_NBIOT:
-                atReqGetNoResult.pAtCmd = "AT+QCFG=\"nwscanseq\",03,1";
-                break;
-            case CELLULAR_RAT_GSM:
-                atReqGetNoResult.pAtCmd = "AT+QCFG=\"nwscanseq\",01,1";
-                break;
-            default:
-                /* Configure RAT Searching Sequence to automatic. */
-                atReqGetNoResult.pAtCmd = "AT+QCFG=\"nwscanseq\",00,1";
-                break;
+            if (cellularStatus == CELLULAR_SUCCESS) {
+                /* Configure Band configuration to all bands. */
+                atReqGetNoResult.pAtCmd = "AT+QCFG=\"band\",f,400a0e189f,a0e189f";
+                cellularStatus = sendAtCommandWithRetryTimeout(pContext, &atReqGetNoResult);
             }
-            cellularStatus = sendAtCommandWithRetryTimeout( pContext, &atReqGetNoResult );
+
+            if (cellularStatus == CELLULAR_SUCCESS) {
+                /* Configure RAT(s) to be Searched to Automatic. */
+                atReqGetNoResult.pAtCmd = "AT+QCFG=\"nwscanmode\",0,1";
+                cellularStatus = sendAtCommandWithRetryTimeout(pContext, &atReqGetNoResult);
+            }
+
+            if (cellularStatus == CELLULAR_SUCCESS) {
+                /* Configure Network Category to be Searched under LTE RAT to LTE Cat M1 and Cat NB1. */
+                atReqGetNoResult.pAtCmd = "AT+QCFG=\"iotopmode\",2,1";
+                cellularStatus = sendAtCommandWithRetryTimeout(pContext, &atReqGetNoResult);
+            }
+
+            if (cellularStatus == CELLULAR_SUCCESS) {
+                /* Configure RAT Searching Sequence to default radio access technology. */
+                switch (CELLULAR_CONFIG_DEFAULT_RAT) {
+                    case CELLULAR_RAT_CATM1:
+                        atReqGetNoResult.pAtCmd = "AT+QCFG=\"nwscanseq\",02,1";
+                        break;
+                    case CELLULAR_RAT_NBIOT:
+                        atReqGetNoResult.pAtCmd = "AT+QCFG=\"nwscanseq\",03,1";
+                        break;
+                    case CELLULAR_RAT_GSM:
+                        atReqGetNoResult.pAtCmd = "AT+QCFG=\"nwscanseq\",01,1";
+                        break;
+                    default:
+                        /* Configure RAT Searching Sequence to automatic. */
+                        atReqGetNoResult.pAtCmd = "AT+QCFG=\"nwscanseq\",00,1";
+                        break;
+                }
+                cellularStatus = sendAtCommandWithRetryTimeout(pContext, &atReqGetNoResult);
+            }
         }
 
         if( cellularStatus == CELLULAR_SUCCESS )
