@@ -151,10 +151,10 @@ CellularError_t Cellular_CommonInit( CellularHandle_t * pCellularHandle,
         cellularStatus = Cellular_ModuleEnableUE( pContext );
     }
 
-    if( cellularStatus == CELLULAR_SUCCESS )
-    {
-        cellularStatus = Cellular_ModuleEnableUrc( pContext );
-    }
+    // if( cellularStatus == CELLULAR_SUCCESS )
+    // {
+    //     cellularStatus = Cellular_ModuleEnableUrc( pContext );
+    // }
 
     return cellularStatus;
 }

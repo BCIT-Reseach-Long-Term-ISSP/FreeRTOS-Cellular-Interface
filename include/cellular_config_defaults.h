@@ -139,7 +139,7 @@
 #endif
 
 #ifndef CELLULAR_CONFIG_DEFAULT_RAT
-    #define CELLULAR_CONFIG_DEFAULT_RAT     ( 8 )  /* Set default RAT to CELLULAR_RAT_CATM1 @ref CellularRat_t. */
+    #define CELLULAR_CONFIG_DEFAULT_RAT     ( 9 )  /* Set default RAT to CELLULAR_RAT_CATM1 @ref CellularRat_t. */
 #endif
 
 #ifndef CELLULAR_NEW_SHIELD
