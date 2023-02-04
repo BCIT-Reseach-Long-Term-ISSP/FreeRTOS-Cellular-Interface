@@ -589,7 +589,7 @@ CellularError_t Cellular_SocketRecv( CellularHandle_t cellularHandle,
              * The max length of the string is fixed and checked offline. */
             /* coverity[misra_c_2012_rule_21_6_violation]. */
             ( void ) snprintf( cmdBuf, CELLULAR_AT_CMD_TYPICAL_MAX_SIZE,
-                               "%s%u,%u", "AT+USORD=", sessionId, recvLen );
+                               "%s%lu,%lu", "AT+USORD=", sessionId, recvLen );
             pktStatus = _Cellular_TimeoutAtcmdDataRecvRequestWithCallback( pContext,
                                                                            atReqSocketRecv,
                                                                            recvTimeout,
@@ -729,7 +729,7 @@ CellularError_t Cellular_SocketSend( CellularHandle_t cellularHandle,
         /* The return value of snprintf is not used.
          * The max length of the string is fixed and checked offline. */
         /* coverity[misra_c_2012_rule_21_6_violation]. */
-        ( void ) snprintf( cmdBuf, CELLULAR_AT_CMD_TYPICAL_MAX_SIZE, "%s%u,%u",
+        ( void ) snprintf( cmdBuf, CELLULAR_AT_CMD_TYPICAL_MAX_SIZE, "%s%lu,%lu",
                            "AT+USOWR=", sessionId, atDataReqSocketSend.dataLen );
 
         pktStatus = _Cellular_AtcmdDataSend( pContext, atReqSocketSend, atDataReqSocketSend,
@@ -815,7 +815,7 @@ CellularError_t Cellular_SocketClose( CellularHandle_t cellularHandle,
         /* Close the socket. */
         if( socketHandle->socketState == SOCKETSTATE_CONNECTED )
         {
-            ( void ) snprintf( cmdBuf, CELLULAR_AT_CMD_TYPICAL_MAX_SIZE, "%s%u,%d",
+            ( void ) snprintf( cmdBuf, CELLULAR_AT_CMD_TYPICAL_MAX_SIZE, "%s%lu,%d",
                                "AT+USOCL=", sessionId, CELLULAR_CONFIG_SET_SOCKET_CLOSE_ASYNC_MODE );
             pktStatus = _Cellular_TimeoutAtcmdRequestWithCallback( pContext, atReqSocketClose, SOCKET_CLOSE_PACKET_REQ_TIMEOUT_MS );
 

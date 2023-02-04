@@ -27,6 +27,7 @@
 #include "cellular_config_defaults.h"
 
 #include <stdint.h>
+#include <stdio.h>
 
 #include "cellular_platform.h"
 #include "cellular_common.h"
