@@ -26,6 +26,7 @@
 /**
  * @brief FreeRTOS Cellular Library API implemenation with 3GPP AT command.
  */
+//dummy line
 
 /* Standard includes. */
 #include <stdio.h>

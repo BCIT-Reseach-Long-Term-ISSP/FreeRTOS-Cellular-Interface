@@ -43,7 +43,7 @@
 #include "cellular_types.h"
 #include "cellular_internal.h"
 #include "cellular_common_internal.h"
-#include "cellular_common_api.h"
+
 
 /*-----------------------------------------------------------*/
 
