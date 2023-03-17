@@ -308,7 +308,7 @@
  * <b>Default value (if undefined):</b> 1000
  */
 #ifndef CELLULAR_COMM_IF_SEND_TIMEOUT_MS
-    #define CELLULAR_COMM_IF_SEND_TIMEOUT_MS    ( 1000U )
+    #define CELLULAR_COMM_IF_SEND_TIMEOUT_MS    ( 100U )
 #endif
 
 /**

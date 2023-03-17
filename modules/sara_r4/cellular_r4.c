@@ -1,5 +1,5 @@
 /*
- * FreeRTOS-Cellular-Interface v1.1.0
+ * FreeRTOS-Cellular-Interface v1.3.0
  * Copyright (C) 2020 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -37,7 +37,7 @@
 /*-----------------------------------------------------------*/
 
 #define ENBABLE_MODULE_UE_RETRY_COUNT         ( 3U )
-#define ENBABLE_MODULE_UE_RETRY_TIMEOUT       ( 5000U )
+#define ENBABLE_MODULE_UE_RETRY_TIMEOUT       ( 1000U )
 #define ENBABLE_MODULE_UE_REBOOT_POLL_TIME    ( 2000U )
 #define ENBABLE_MODULE_UE_REBOOT_MAX_TIME     ( 25000U )
 
@@ -263,7 +263,15 @@ CellularError_t rebootCellularModem( CellularContext_t * pContext,
     CellularError_t cellularStatus = CELLULAR_SUCCESS;
     CellularPktStatus_t pktStatus = CELLULAR_PKT_STATUS_OK;
     uint32_t count = 0;
-
+    CellularAtReq_t atReqGetWoPrefix =
+    {
+        NULL,
+        CELLULAR_AT_WO_PREFIX,
+        NULL,
+        NULL,
+        NULL,
+        0
+    };
     CellularAtReq_t atReqGetNoResult =
     {
         "AT+CFUN=15",
@@ -282,11 +290,11 @@ CellularError_t rebootCellularModem( CellularContext_t * pContext,
     /* wait for modem after reboot*/
     while( count < ENBABLE_MODULE_UE_REBOOT_MAX_TIME )
     {
-        LogInfo( ( "rebootCellularModem: ..." ) );
+        LogInfo( ( "rebootCellularModem: Use ATE0 command to test modem status." ) );
 
-        atReqGetNoResult.pAtCmd = "ATE0";
+        atReqGetWoPrefix.pAtCmd = "ATE0";
 
-        pktStatus = _Cellular_TimeoutAtcmdRequestWithCallback( pContext, atReqGetNoResult, ENBABLE_MODULE_UE_REBOOT_POLL_TIME );
+        pktStatus = _Cellular_TimeoutAtcmdRequestWithCallback( pContext, atReqGetWoPrefix, ENBABLE_MODULE_UE_REBOOT_POLL_TIME );
         cellularStatus = _Cellular_TranslatePktStatus( pktStatus );
 
         if( cellularStatus == CELLULAR_SUCCESS )
@@ -314,6 +322,10 @@ CellularError_t rebootCellularModem( CellularContext_t * pContext,
             }
 
             break;
+        }
+        else
+        {
+            LogWarn( ( "rebootCellularModem: Modem is not ready. Retry sending ATE0." ) );
         }
 
         count = count + ENBABLE_MODULE_UE_REBOOT_POLL_TIME;
@@ -362,12 +374,14 @@ CellularError_t Cellular_ModuleEnableUE( CellularContext_t * pContext )
             cellularStatus = sendAtCommandWithRetryTimeout( pContext, &atReqGetNoResult );
         }
 
-        if( cellularStatus == CELLULAR_SUCCESS )
-        {
-            /* Enable RTS/CTS hardware flow control. */
-            atReqGetNoResult.pAtCmd = "AT+IFC=2,2";
-            cellularStatus = sendAtCommandWithRetryTimeout( pContext, &atReqGetNoResult );
-        }
+        #ifndef CELLULAR_CONFIG_DISABLE_FLOW_CONTROL
+            if( cellularStatus == CELLULAR_SUCCESS )
+            {
+                /* Enable RTS/CTS hardware flow control. */
+                atReqGetNoResult.pAtCmd = "AT+IFC=2,2";
+                cellularStatus = sendAtCommandWithRetryTimeout( pContext, &atReqGetNoResult );
+            }
+        #endif
 
         if( cellularStatus == CELLULAR_SUCCESS )
         {
@@ -401,6 +415,13 @@ CellularError_t Cellular_ModuleEnableUE( CellularContext_t * pContext )
                         cellularStatus = rebootCellularModem( pContext, true, true );
                     }
                 }
+
+                #ifdef CELLULAR_CONFIG_SARA_R4_REBOOT_ON_INIT
+                    else
+                    {
+                        cellularStatus = rebootCellularModem( pContext, true, true );
+                    }
+                #endif
             }
         }
 

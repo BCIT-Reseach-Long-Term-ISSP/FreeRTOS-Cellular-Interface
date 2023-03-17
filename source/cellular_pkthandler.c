@@ -233,7 +233,8 @@ static CellularPktStatus_t _Cellular_AtcmdRequestTimeoutWithCallbackRaw( Cellula
         {
             /* Wait for a response. */
             /* This is platform dependent api. */
-            /* coverity[misra_c_2012_directive_4_6_violation] */
+            /* coverity[misra_c_2012_directive_4_6_violation] */    
+
             qRet = xQueueReceive( pContext->pktRespQueue, &respCode, pdMS_TO_TICKS( timeoutMS ) );
 
             if( qRet == pdTRUE )
@@ -248,7 +249,7 @@ static CellularPktStatus_t _Cellular_AtcmdRequestTimeoutWithCallbackRaw( Cellula
             else
             {
                 pktStatus = CELLULAR_PKT_STATUS_TIMED_OUT;
-                LogError( ( "pkt_recv status=%d, AT cmd %s timed out", pktStatus, atReq.pAtCmd ) );
+                    LogError( ( "pkt_recv status=%d, AT cmd %s timed out", pktStatus, atReq.pAtCmd ) );
             }
         }
 

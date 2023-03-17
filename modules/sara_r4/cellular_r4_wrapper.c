@@ -1,5 +1,5 @@
 /*
- * FreeRTOS-Cellular-Interface v1.1.0
+ * FreeRTOS-Cellular-Interface v1.3.0
  * Copyright (C) 2020 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -119,21 +119,6 @@ CellularError_t Cellular_CreateSocket( CellularHandle_t cellularHandle,
 {
     return Cellular_CommonCreateSocket( cellularHandle, pdnContextId, socketDomain, socketType,
                                         socketProtocol, pSocketHandle );
-}
-
-/*-----------------------------------------------------------*/
-
-/* FreeRTOS Cellular Library API. */
-/* coverity[misra_c_2012_rule_8_7_violation] */
-CellularError_t Cellular_SocketSetSockOpt( CellularHandle_t cellularHandle,
-                                           CellularSocketHandle_t socketHandle,
-                                           CellularSocketOptionLevel_t optionLevel,
-                                           CellularSocketOption_t option,
-                                           const uint8_t * pOptionValue,
-                                           uint32_t optionValueLength )
-{
-    return Cellular_CommonSocketSetSockOpt( cellularHandle, socketHandle, optionLevel, option,
-                                            pOptionValue, optionValueLength );
 }
 
 /*-----------------------------------------------------------*/

@@ -1,5 +1,5 @@
 /*
- * FreeRTOS-Cellular-Interface v1.1.0
+ * FreeRTOS-Cellular-Interface v1.3.0
  * Copyright (C) 2020 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -128,6 +128,9 @@ static CellularError_t controlSignalStrengthIndication( CellularContext_t * pCon
 CellularError_t Cellular_SetPsmSettings( CellularHandle_t cellularHandle,
                                          const CellularPsmSettings_t * pPsmSettings );
 
+static CellularError_t _Cellular_isSockOptSupport( CellularSocketOptionLevel_t optionLevel,
+                                                   CellularSocketOption_t option );
+
 /*-----------------------------------------------------------*/
 
 static CellularPktStatus_t socketRecvDataPrefix( void * pCallbackContext,
@@ -237,30 +240,17 @@ static CellularATError_t getDataFromResp( const CellularATCommandResponse_t * pA
     }
 
     /* Data is stored in the next intermediate response. */
-    if( pAtResp->pItm->pNext != NULL )
-    {
-        pInputLine = pAtResp->pItm->pNext->pLine;
+    pInputLine = pAtResp->pItm->pNext->pLine;
 
-        if( ( pInputLine != NULL ) && ( dataLenToCopy > 0U ) )
-        {
-            /* Copy the data to the out buffer. */
-            ( void ) memcpy( ( void * ) pDataRecv->pData, ( const void * ) pInputLine, dataLenToCopy );
-        }
-        else
-        {
-            LogError( ( "Receive Data: paramerter error, data pointer %p, data to copy %u",
-                        pInputLine, dataLenToCopy ) );
-            atCoreStatus = CELLULAR_AT_BAD_PARAMETER;
-        }
-    }
-    else if( *pDataRecv->pDataLen == 0U )
+    if( ( pInputLine != NULL ) && ( dataLenToCopy > 0U ) )
     {
-        /* Receive command success but no data. */
-        LogDebug( ( "Receive Data: no data" ) );
+        /* Copy the data to the out buffer. */
+        ( void ) memcpy( ( void * ) pDataRecv->pData, ( const void * ) pInputLine, dataLenToCopy );
     }
     else
     {
-        LogError( ( "Receive Data: Intermediate response empty" ) );
+        LogError( ( "Receive Data: paramerter error, data pointer %p, data to copy %u",
+                    pInputLine, dataLenToCopy ) );
         atCoreStatus = CELLULAR_AT_BAD_PARAMETER;
     }
 
@@ -281,8 +271,6 @@ static CellularPktStatus_t _Cellular_RecvFuncData( CellularContext_t * pContext,
     char * pInputLine = NULL, * pToken = NULL;
     const _socketDataRecv_t * pDataRecv = ( _socketDataRecv_t * ) pData;
     int32_t tempValue = 0;
-
-    ( void ) dataLen;
 
     if( pContext == NULL )
     {
@@ -314,7 +302,8 @@ static CellularPktStatus_t _Cellular_RecvFuncData( CellularContext_t * pContext,
         {
             if( pAtResp->pItm->pNext == NULL )
             {
-                /* No data response. */
+                /* Modem return +USORD: 0,"". No data returned since there is no data
+                 * length field in modem response. */
                 *pDataRecv->pDataLen = 0;
             }
             else
@@ -341,10 +330,11 @@ static CellularPktStatus_t _Cellular_RecvFuncData( CellularContext_t * pContext,
                     }
                 }
 
-                /* Process the data buffer. */
-                if( atCoreStatus == CELLULAR_AT_SUCCESS )
+                /* Process the data buffer. Modem may also return +USORD: 0,0,"" with 0 data length.
+                 * Process the data response only when data length is greater than 0. */
+                if( ( atCoreStatus == CELLULAR_AT_SUCCESS ) && ( *pDataRecv->pDataLen > 0U ) )
                 {
-                    atCoreStatus = getDataFromResp( pAtResp, pDataRecv, *pDataRecv->pDataLen );
+                    atCoreStatus = getDataFromResp( pAtResp, pDataRecv, dataLen );
                 }
             }
         }
@@ -546,16 +536,31 @@ CellularError_t Cellular_SocketRecv( CellularHandle_t cellularHandle,
 
     if( cellularStatus != CELLULAR_SUCCESS )
     {
-        LogDebug( ( "Cellular_SocketRecv: _Cellular_CheckLibraryStatus failed" ) );
+        LogError( ( "Cellular_SocketRecv: _Cellular_CheckLibraryStatus failed." ) );
     }
     else if( socketHandle == NULL )
     {
+        LogError( ( "Cellular_SocketRecv: Invalid socketHandle." ) );
         cellularStatus = CELLULAR_INVALID_HANDLE;
     }
     else if( ( pBuffer == NULL ) || ( pReceivedDataLength == NULL ) || ( bufferLength == 0U ) )
     {
-        LogDebug( ( "Cellular_SocketRecv: Bad input Param" ) );
+        LogError( ( "Cellular_SocketRecv: Bad input Param." ) );
         cellularStatus = CELLULAR_BAD_PARAMETER;
+    }
+    else if( socketHandle->socketState != SOCKETSTATE_CONNECTED )
+    {
+        /* Check the socket connection state. */
+        LogInfo( ( "Cellular_SocketRecv: socket state %d is not connected.", socketHandle->socketState ) );
+
+        if( ( socketHandle->socketState == SOCKETSTATE_ALLOCATED ) || ( socketHandle->socketState == SOCKETSTATE_CONNECTING ) )
+        {
+            cellularStatus = CELLULAR_SOCKET_NOT_CONNECTED;
+        }
+        else
+        {
+            cellularStatus = CELLULAR_SOCKET_CLOSED;
+        }
     }
     else
     {
@@ -691,6 +696,8 @@ CellularError_t Cellular_SocketSend( CellularHandle_t cellularHandle,
     else if( socketHandle->socketState != SOCKETSTATE_CONNECTED )
     {
         /* Check the socket connection state. */
+        LogInfo( ( "Cellular_SocketSend: socket state %d is not connected.", socketHandle->socketState ) );
+
         if( ( socketHandle->socketState == SOCKETSTATE_ALLOCATED ) || ( socketHandle->socketState == SOCKETSTATE_CONNECTING ) )
         {
             cellularStatus = CELLULAR_SOCKET_NOT_CONNECTED;
@@ -792,6 +799,11 @@ CellularError_t Cellular_SocketClose( CellularHandle_t cellularHandle,
     }
     else
     {
+        if( socketHandle->socketState == SOCKETSTATE_CONNECTING )
+        {
+            LogWarn( ( "Cellular_SocketClose: Socket state is SOCKETSTATE_CONNECTING." ) );
+        }
+
         cellularStatus = _Cellular_GetModuleContext( pContext, ( void ** ) &pModuleContext );
     }
 
@@ -865,22 +877,27 @@ CellularError_t Cellular_SocketConnect( CellularHandle_t cellularHandle,
 
     if( cellularStatus != CELLULAR_SUCCESS )
     {
-        LogDebug( ( "Cellular_SocketConnect: _Cellular_CheckLibraryStatus failed" ) );
+        LogError( ( "Cellular_SocketConnect: _Cellular_CheckLibraryStatus failed." ) );
     }
     else if( pRemoteSocketAddress == NULL )
     {
-        LogDebug( ( "Cellular_SocketConnect: Invalid socket address" ) );
+        LogError( ( "Cellular_SocketConnect: Invalid socket address." ) );
         cellularStatus = CELLULAR_BAD_PARAMETER;
     }
     else if( socketHandle == NULL )
     {
-        LogDebug( ( "Cellular_SocketConnect: Invalid socket handle" ) );
+        LogError( ( "Cellular_SocketConnect: Invalid socket handle." ) );
         cellularStatus = CELLULAR_INVALID_HANDLE;
     }
     else if( socketHandle->socketProtocol != CELLULAR_SOCKET_PROTOCOL_TCP )
     {
-        LogDebug( ( "Cellular_SocketConnect: Invalid socket protocol" ) );
+        LogError( ( "Cellular_SocketConnect: Invalid socket protocol." ) );
         cellularStatus = CELLULAR_BAD_PARAMETER;
+    }
+    else if( ( socketHandle->socketState == SOCKETSTATE_CONNECTED ) || ( socketHandle->socketState == SOCKETSTATE_CONNECTING ) )
+    {
+        LogError( ( "Cellular_SocketConnect: Not allowed in state %d.", socketHandle->socketState ) );
+        cellularStatus = CELLULAR_NOT_ALLOWED;
     }
     else
     {
@@ -917,6 +934,10 @@ CellularError_t Cellular_SocketConnect( CellularHandle_t cellularHandle,
                            socketHandle->remoteSocketAddress.ipAddress.ipAddress,
                            socketHandle->remoteSocketAddress.port );
 
+        /* Set the socket state to connecting state. If cellular modem returns error,
+         * revert the state to allocated state. */
+        socketHandle->socketState = SOCKETSTATE_CONNECTING;
+
         pktStatus = _Cellular_TimeoutAtcmdRequestWithCallback( pContext, atReqSocketConnect,
                                                                SOCKET_CONNECT_PACKET_REQ_TIMEOUT_MS );
 
@@ -924,10 +945,9 @@ CellularError_t Cellular_SocketConnect( CellularHandle_t cellularHandle,
         {
             LogError( ( "Cellular_SocketConnect: Socket connect failed, cmdBuf:%s, PktRet: %d", cmdBuf, pktStatus ) );
             cellularStatus = _Cellular_TranslatePktStatus( pktStatus );
-        }
-        else
-        {
-            socketHandle->socketState = SOCKETSTATE_CONNECTING;
+
+            /* Revert the state to allocated state. */
+            socketHandle->socketState = SOCKETSTATE_ALLOCATED;
         }
     }
 
@@ -1455,7 +1475,7 @@ CellularError_t Cellular_GetPdnStatus( CellularHandle_t cellularHandle,
 {
     CellularContext_t * pContext = ( CellularContext_t * ) cellularHandle;
     CellularError_t cellularStatus = CELLULAR_SUCCESS;
-    uint32_t i = 0;
+    uint8_t i = 0;
 
     CellularPdnContextActInfo_t pdpContextsActInfo = { 0 };
 
@@ -1473,6 +1493,8 @@ CellularError_t Cellular_GetPdnStatus( CellularHandle_t cellularHandle,
 
     if( cellularStatus == CELLULAR_SUCCESS )
     {
+        *pNumStatus = 0U;
+
         /* Check the current <Act> status of contexts. */
         cellularStatus = _Cellular_GetContextActivationStatus( cellularHandle, &pdpContextsActInfo );
 
@@ -1482,15 +1504,19 @@ CellularError_t Cellular_GetPdnStatus( CellularHandle_t cellularHandle,
 
             for( i = 0U; i < ( MAX_PDP_CONTEXTS - 1 ); i++ )
             {
-                /* Print only those contexts that are present in +CGACT response */
+                /* Print only those contexts that are present in +CGACT response. */
                 if( pdpContextsActInfo.contextsPresent[ i ] )
                 {
                     LogDebug( ( "Context [%d], Act State [%d]\r\n", i + 1, pdpContextsActInfo.contextActState[ i ] ) );
+
+                    if( *pNumStatus < numStatusBuffers )
+                    {
+                        pPdnStatusBuffers[ *pNumStatus ].contextId = i + 1U;
+                        pPdnStatusBuffers[ *pNumStatus ].state = pdpContextsActInfo.contextActState[ i ];
+                        *pNumStatus = *pNumStatus + 1U;
+                    }
                 }
             }
-
-            /* TODO: Currently only one context state can be saved in PdnStatusBuffers. */
-            pPdnStatusBuffers->state = pdpContextsActInfo.contextActState[ 0 ];
         }
     }
 
@@ -2743,6 +2769,29 @@ CellularError_t Cellular_SetPsmSettings( CellularHandle_t cellularHandle,
 
 /*-----------------------------------------------------------*/
 
+static CellularError_t _Cellular_isSockOptSupport( CellularSocketOptionLevel_t optionLevel,
+                                                   CellularSocketOption_t option )
+{
+    CellularError_t err = CELLULAR_UNSUPPORTED;
+
+    if( ( optionLevel == CELLULAR_SOCKET_OPTION_LEVEL_TRANSPORT ) &&
+        ( ( option == CELLULAR_SOCKET_OPTION_SEND_TIMEOUT ) ||
+          ( option == CELLULAR_SOCKET_OPTION_RECV_TIMEOUT ) ||
+          ( option == CELLULAR_SOCKET_OPTION_PDN_CONTEXT_ID ) ) )
+    {
+        err = CELLULAR_SUCCESS;
+    }
+    else
+    {
+        LogWarn( ( "Cellular_SocketSetSockOpt: Option [Level:option=%d:%d] not supported in SARA R4",
+                   optionLevel, option ) );
+    }
+
+    return err;
+}
+
+/*-----------------------------------------------------------*/
+
 /* FreeRTOS Cellular Library API. */
 /* coverity[misra_c_2012_rule_8_7_violation] */
 CellularError_t Cellular_SetEidrxSettings( CellularHandle_t cellularHandle,
@@ -2829,6 +2878,29 @@ CellularError_t Cellular_Init( CellularHandle_t * pCellularHandle,
     cellularTokenTable.cellularSrcExtraTokenSuccessTableSize = 0;
 
     return Cellular_CommonInit( pCellularHandle, pCommInterface, &cellularTokenTable );
+}
+
+/*-----------------------------------------------------------*/
+
+/* FreeRTOS Cellular Library API. */
+CellularError_t Cellular_SocketSetSockOpt( CellularHandle_t cellularHandle,
+                                           CellularSocketHandle_t socketHandle,
+                                           CellularSocketOptionLevel_t optionLevel,
+                                           CellularSocketOption_t option,
+                                           const uint8_t * pOptionValue,
+                                           uint32_t optionValueLength )
+{
+    CellularError_t err = CELLULAR_SUCCESS;
+
+    err = _Cellular_isSockOptSupport( optionLevel, option );
+
+    if( err == CELLULAR_SUCCESS )
+    {
+        err = Cellular_CommonSocketSetSockOpt( cellularHandle, socketHandle, optionLevel, option,
+                                               pOptionValue, optionValueLength );
+    }
+
+    return err;
 }
 
 /*-----------------------------------------------------------*/

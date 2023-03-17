@@ -1,5 +1,5 @@
 /*
- * FreeRTOS-Cellular-Interface v1.1.0
+ * FreeRTOS-Cellular-Interface v1.3.0
  * Copyright (C) 2020 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -505,22 +505,30 @@ static void _cellular_UrcProcessUusord( CellularContext_t * pContext,
         /* Call the callback function of this session. */
         if( atCoreStatus == CELLULAR_AT_SUCCESS )
         {
-            pSocketData = _Cellular_GetSocketData( pContext, socketIndex );
-
-            if( pSocketData == NULL )
+            if( socketIndex == INVALID_SOCKET_INDEX )
             {
-                LogError( ( "_cellular_UrcProcessUusord : invalid socket index %d", socketIndex ) );
+                LogWarn( ( "_cellular_UrcProcessUusord : unknown session data received. "
+                           "The session %u may not be closed properly in previous execution.", sessionId ) );
             }
             else
             {
-                /* Indicate the upper layer about the data reception. */
-                if( pSocketData->dataReadyCallback != NULL )
+                pSocketData = _Cellular_GetSocketData( pContext, socketIndex );
+
+                if( pSocketData == NULL )
                 {
-                    pSocketData->dataReadyCallback( pSocketData, pSocketData->pDataReadyCallbackContext );
+                    LogError( ( "_cellular_UrcProcessUusord : invalid socket index %d", socketIndex ) );
                 }
                 else
                 {
-                    LogDebug( ( "_cellular_UrcProcessUusord: Data ready callback not set!!" ) );
+                    /* Indicate the upper layer about the data reception. */
+                    if( pSocketData->dataReadyCallback != NULL )
+                    {
+                        pSocketData->dataReadyCallback( pSocketData, pSocketData->pDataReadyCallbackContext );
+                    }
+                    else
+                    {
+                        LogDebug( ( "_cellular_UrcProcessUusord: Data ready callback not set!!" ) );
+                    }
                 }
             }
         }
@@ -567,22 +575,33 @@ static void _cellular_UrcProcessUusocl( CellularContext_t * pContext,
         /* Call the callback function of this session. */
         if( atCoreStatus == CELLULAR_AT_SUCCESS )
         {
-            pSocketData = _Cellular_GetSocketData( pContext, socketIndex );
-
-            if( pSocketData == NULL )
+            if( socketIndex == INVALID_SOCKET_INDEX )
             {
-                LogError( ( "_cellular_UrcProcessUusocl : invalid socket index %d", socketIndex ) );
+                LogWarn( ( "_cellular_UrcProcessUusocl : unknown session closed URC received. "
+                           "The session %u may not be closed properly in previous execution.", sessionId ) );
             }
             else
             {
-                /* Indicate the upper layer about the data reception. */
-                if( pSocketData->closedCallback != NULL )
+                pSocketData = _Cellular_GetSocketData( pContext, socketIndex );
+
+                if( pSocketData == NULL )
                 {
-                    pSocketData->closedCallback( pSocketData, pSocketData->pClosedCallbackContext );
+                    LogError( ( "_cellular_UrcProcessUusocl : invalid socket index %d", socketIndex ) );
                 }
                 else
                 {
-                    LogDebug( ( "_cellular_UrcProcessUusord: Data ready callback not set!!" ) );
+                    /* Change the socket state to disconnected. */
+                    pSocketData->socketState = SOCKETSTATE_DISCONNECTED;
+
+                    /* Indicate the upper layer about the data reception. */
+                    if( pSocketData->closedCallback != NULL )
+                    {
+                        pSocketData->closedCallback( pSocketData, pSocketData->pClosedCallbackContext );
+                    }
+                    else
+                    {
+                        LogDebug( ( "_cellular_UrcProcessUusord: Data ready callback not set!!" ) );
+                    }
                 }
             }
         }
