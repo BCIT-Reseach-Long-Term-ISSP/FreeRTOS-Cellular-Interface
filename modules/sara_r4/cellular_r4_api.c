@@ -58,9 +58,9 @@
 
 #define CELLULAR_AT_CMD_TYPICAL_MAX_SIZE        ( 32U )
 
-#define DATA_SEND_TIMEOUT_MS                    ( 10000U )
+#define DATA_SEND_TIMEOUT_MS                    ( 20000U )
 
-#define PACKET_REQ_TIMEOUT_MS                   ( 10000U )
+#define PACKET_REQ_TIMEOUT_MS                   ( 20000U )
 
 #define DATA_READ_TIMEOUT_MS                    ( 50000UL )
 
@@ -741,7 +741,7 @@ CellularError_t Cellular_SocketSend( CellularHandle_t cellularHandle,
 
         pktStatus = _Cellular_AtcmdDataSend( pContext, atReqSocketSend, atDataReqSocketSend,
                                              socketSendDataPrefix, NULL,
-                                             PACKET_REQ_TIMEOUT_MS, sendTimeout, 200U );
+                                             PACKET_REQ_TIMEOUT_MS, sendTimeout, 2000U );
 
         if( pktStatus != CELLULAR_PKT_STATUS_OK )
         {
@@ -921,6 +921,31 @@ CellularError_t Cellular_SocketConnect( CellularHandle_t cellularHandle,
             pModuleContext->pSessionMap[ sessionId ] = socketHandle->socketId;
         }
     }
+
+    if(cellularStatus == CELLULAR_SUCCESS)
+    {
+        ( void ) snprintf( cmdBuf, CELLULAR_AT_CMD_MAX_SIZE,
+                    "AT+USOSEC=%u,1,0",
+                    sessionId);
+        
+        /* Set the socket state to connecting state. If cellular modem returns error,
+         * revert the state to allocated state. */
+        socketHandle->socketState = SOCKETSTATE_CONNECTING;
+
+        pktStatus = _Cellular_TimeoutAtcmdRequestWithCallback( pContext, atReqSocketConnect,
+                                                               SOCKET_CONNECT_PACKET_REQ_TIMEOUT_MS );
+
+        if( pktStatus != CELLULAR_PKT_STATUS_OK )
+        {
+            LogError( ( "Cellular_SocketConnect: Socket connect failed, cmdBuf:%s, PktRet: %d", cmdBuf, pktStatus ) );
+            cellularStatus = _Cellular_TranslatePktStatus( pktStatus );
+
+            /* Revert the state to allocated state. */
+            socketHandle->socketState = SOCKETSTATE_ALLOCATED;
+        }
+
+    }
+
 
     /* Start the tcp connection. */
     if( cellularStatus == CELLULAR_SUCCESS )

@@ -948,8 +948,7 @@ CellularError_t _Cellular_LibInit( CellularHandle_t * pCellularHandle,
         pContext = _Cellular_AllocContext();
 
         if( pContext == NULL )
-        {
-            LogError( ( "CellularContext_t allocation failed" ) );
+        {            LogError( ( "CellularContext_t allocation failed" ) );
             cellularStatus = CELLULAR_NO_MEMORY;
         }
         else
